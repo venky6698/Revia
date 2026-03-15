@@ -1,0 +1,41 @@
+flowchart LR
+  %% Revia Stitch - Auth + Account Overview (AWS, B2B SSO)
+
+  subgraph Client["Client"]
+    B["Browser (SPA)"]
+  end
+
+  subgraph Edge["Edge"]
+    CF["CloudFront"]
+    WAF["AWS WAF"]
+    S3WEB["S3 (Static Web)"]
+  end
+
+  subgraph Identity["Identity"]
+    COG["Amazon Cognito (User Pool)\nFederation: Entra ID / Okta"]
+    IDP["Microsoft Entra ID (Azure AD)\nor Okta"]
+  end
+
+  subgraph App["Application"]
+    APIG["API Gateway"]
+    API["Stitch API (Lambda/ECS)"]
+  end
+
+  subgraph Data["Data (Multi-Tenant Partitioning)"]
+    DDB["DynamoDB (Brands, Users, Memberships)\nPK includes tenantId"]
+    AUD["DynamoDB (Audit Log)\n(auth events, changes)"]
+  end
+
+  B --> CF
+  CF --> WAF
+  WAF --> S3WEB
+
+  B -->|SSO redirect| COG
+  COG <--> IDP
+  COG -->|JWT| B
+
+  B -->|HTTPS + JWT| APIG
+  APIG --> API
+  API --> DDB
+  API --> AUD
+

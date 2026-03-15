@@ -1,0 +1,30 @@
+flowchart LR
+  %% Revia Stitch - Collaborate Flow (Org users + invites + per-file permissions)
+
+  A["File Workspace"] -->|Click Collaborate| B["Collaborate Panel"]
+
+  B --> C["People List<br/>Org directory users with accounts"]
+  C --> C1["Search + filter<br/>By name, email, role"]
+
+  B --> D["Current Access<br/>Users already on this file"]
+  D --> D1["Access levels<br/>Viewer, Editor, Collaborator"]
+
+  B --> E["Invite Users"]
+  E --> E1["Select user or enter email<br/>(same tenant)"]
+  E --> E2["Assign file permission<br/>Viewer, Editor, Collaborator"]
+  E --> E3["Optional: message"]
+  E --> F["Send Invite"]
+
+  F --> G["Invite Sent<br/>Email notification"]
+  G --> H["Pending invites list<br/>Resend, revoke"]
+
+  D --> I["Change Access<br/>Upgrade, downgrade, remove"]
+  I --> J{Creator or Owner?}
+  J -->|No| K["Not allowed<br/>Request access"]
+  J -->|Yes| L["Save permission changes"]
+
+  %% Permission enforcement (examples)
+  D1 --> M["Viewer<br/>Can view + comment"]
+  D1 --> N["Editor<br/>Can edit + comment"]
+  D1 --> O["Collaborator<br/>Can export + share<br/>and manage some settings"]
+

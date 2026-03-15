@@ -1,0 +1,47 @@
+sequenceDiagram
+  autonumber
+
+  participant U as User (Browser)
+  participant SPA as Stitch Web App (SPA)
+  participant API as Stitch API
+  participant DB as DynamoDB (Exports + ACL)
+  participant Q as SQS (Export Queue)
+  participant W as Lambda (Export Worker)
+  participant S3 as S3 (Files + Export Artifacts)
+  participant MAIL as Email (SES)
+  participant MS as Microsoft Graph (Outlook)
+
+  Note over U,SPA: User clicks Export
+  U->>SPA: Open Export modal
+  SPA->>API: POST /files/{fileId}/exports
+  API->>DB: Check file ACL permission == Collaborator or higher
+  alt Allowed
+    API->>DB: Create exportJob (Queued)
+    API->>Q: Enqueue exportJob
+    API-->>SPA: 202 Accepted (exportJobId)
+  else Denied
+    API-->>SPA: 403 Forbidden
+  end
+
+  Q-->>W: Export job message
+  W->>DB: Update exportJob status=Running
+  W->>S3: GET source file bytes
+  W->>W: Render PDF or package artifacts
+  W->>S3: PUT export artifact (pdf)
+
+  alt Export as PDF download
+    W->>DB: status=Ready + artifactS3Key
+  else Export to email
+    W->>MAIL: Send email with link or attachment
+    W->>DB: status=Sent
+  else Export to Outlook
+    Note over MS: Requires tenant admin consent\nand per-user OAuth token
+    W->>MS: Create draft email or send message
+    W->>DB: status=Sent
+  end
+
+  SPA->>API: GET /exports/{exportJobId}
+  API->>DB: Fetch status + links
+  API-->>SPA: 200 OK
+  SPA-->>U: Show download or sent confirmation
+

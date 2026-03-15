@@ -1,0 +1,29 @@
+flowchart LR
+  %% Revia Stitch - File Workspace (Viewer + Left Panel)
+
+  A["File List View<br/>(Upload Files / Tech Packs)"] -->|Select file| B["File Workspace"]
+
+  B --> C["Default: View<br/>Render full file inline<br/>(PDF/Excel)"]
+
+  %% Left panel primary navigation/actions
+  B --> H["Home<br/>(Style overview + activity)"]
+  B --> V["View<br/>(read-only)"]
+  B --> E["Edit<br/>(annotations, markups)"]
+  B --> AU["Audit<br/>(consistency check)"]
+  B --> CO["Collaborate<br/>(comments, mentions, resolve)"]
+  B --> SH["Share<br/>(invite reviewers, permissions)"]
+  B --> MG["Manage<br/>(metadata, tags, collection)"]
+  B --> VR["Version History<br/>(immutable versions + diffs)"]
+  B --> SG["Signature<br/>(approve/reject, sign-off)"]
+
+  %% Common transitions
+  E --> VR
+  AU --> CO
+  CO --> VR
+  SG --> VR
+
+  %% Guardrails
+  B --> G{File status Ready?}
+  G -->|No| AU2["Audit disabled<br/>(Indexing in progress)"]
+  G -->|Yes| AU
+

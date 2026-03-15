@@ -1,0 +1,57 @@
+sequenceDiagram
+  autonumber
+
+  participant U as User (Browser)
+  participant SPA as Stitch Web App (SPA)
+  participant API as Stitch API
+  participant DB as Metadata DB (tenantId scoped)
+  participant S3 as S3 (Original files)
+  participant Q as SQS (Audit Queue)
+  participant ORCH as Lambda (Audit Orchestrator)
+  participant EX as Lambda (Extract + Locate)
+  participant BR as Bedrock (LLM)
+  participant OS as OpenSearch (Optional lookup)
+
+  Note over U,SPA: User is in File Workspace and clicks Audit
+  U->>SPA: Run Audit
+  SPA->>API: POST /files/{fileId}/audit-runs
+  API->>DB: Create auditRun (status=Queued)
+  API->>Q: Enqueue (tenantId, fileId, auditRunId, s3Key)
+  API-->>SPA: 202 Accepted (auditRunId)
+  SPA-->>U: Show "Audit running"
+
+  Note over Q,ORCH: Async processing
+  Q-->>ORCH: SQS message
+  ORCH->>DB: Update auditRun status=Running
+  ORCH->>EX: Invoke (tenantId, fileId, auditRunId)
+
+  Note over EX: Goal: produce findings with page references and highlight regions
+  EX->>S3: GET file bytes
+  EX->>EX: Parse PDF/Excel into pages/sheets
+  EX->>EX: Extract text + tables + image-derived text
+  EX->>EX: Build page map (pageNumber, text offsets, bounding boxes)
+  EX->>EX: Redact PII before any LLM call (sanitized content only)
+
+  opt Brand terminology + prior attributes
+    EX->>OS: Query tenant terminology / similar styles
+    OS-->>EX: Terminology + known attribute patterns
+  end
+
+  EX->>BR: Prompt: detect inconsistencies using examples
+  Note over BR: Return structured JSON findings\n(each with pageNumber + anchor text)
+  BR-->>EX: Findings JSON
+
+  EX->>EX: Resolve each finding to exact highlight region<br/>(bounding boxes from page map)
+  EX->>DB: Store audit report summary + findings<br/>(status=Ready)
+  EX->>DB: Store highlight anchors<br/>(pageNumber, bbox, tag)
+
+  alt Failure
+    EX->>DB: status=Failed + errorCode
+  end
+
+  Note over U,SPA: UI polls or receives update
+  SPA->>API: GET /audit-runs/{auditRunId}
+  API->>DB: Fetch status + findings + highlights
+  API-->>SPA: 200 OK
+  SPA-->>U: Render report list + click-to-jump highlights in viewer
+

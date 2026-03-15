@@ -1,0 +1,60 @@
+flowchart LR
+  %% Revia Stitch - Audit MCP Server (Runtime) with Multi-agent Orchestration
+
+  subgraph Client["Client"]
+    SPA["Stitch Web App"]
+  end
+
+  subgraph App["Stitch Backend"]
+    API["Stitch API"]
+    DB["DynamoDB<br/>(AuditRuns, Findings, Highlights)"]
+    S3["S3<br/>(raw files + sanitized extracts)"]
+    OS["OpenSearch<br/>(chunks + attributes index)"]
+  end
+
+  subgraph Orchestration["Orchestration"]
+    SF["Step Functions<br/>(deterministic workflow)"]
+    Q["SQS<br/>(work queue)"]
+  end
+
+  subgraph MCP["Audit MCP Server"]
+    MCPAPI["MCP Server<br/>(tool gateway)"]
+    Tools["Tools<br/>get_file_pages<br/>get_page_text<br/>get_tables<br/>get_images_ocr<br/>search_chunks<br/>write_audit_report<br/>create_highlights"]
+  end
+
+  subgraph Agents["Multi-agent Audit"]
+    A0["Coordinator Agent"]
+    A1["Completeness Agent<br/>(missing pocket specs, tolerances)"]
+    A2["Terminology Agent<br/>(inconsistent naming)"]
+    A3["Measurement Agent<br/>(missing/contradicting specs)"]
+    A4["Visual Reference Agent<br/>(missing diagrams/swatches)"]
+  end
+
+  subgraph LLM["LLM Runtime"]
+    BR["Bedrock LLM"]
+  end
+
+  SPA --> API --> DB
+  API --> SF --> Q
+  Q --> MCPAPI
+
+  MCPAPI --> Tools
+  Tools --> S3
+  Tools --> OS
+  Tools --> DB
+
+  A0 --> BR
+  A0 --> MCPAPI
+  A0 --> A1
+  A0 --> A2
+  A0 --> A3
+  A0 --> A4
+
+  A1 --> BR
+  A2 --> BR
+  A3 --> BR
+  A4 --> BR
+
+  MCPAPI --> DB
+  API --> SPA
+

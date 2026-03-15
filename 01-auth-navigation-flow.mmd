@@ -1,0 +1,35 @@
+flowchart LR
+  %% Revia Stitch - Signup/Login + App Shell Navigation (B2B SSO)
+
+  A["Landing / Marketing<br/>(Get Started)"] --> B["Sign In / Sign Up<br/>(SSO choice)"]
+
+  B -->|Continue with Microsoft| M["Redirect to Microsoft Entra ID (Azure AD)"]
+  B -->|Continue with Okta| O["Redirect to Okta"]
+
+  M --> C["SSO Callback<br/>(auth code)"]
+  O --> C
+
+  C --> D{User exists in Stitch tenant DB}
+
+  D -->|No - first time| E["First-Time Account Setup<br/>Create Brand/Tenant + User<br/>Role: Owner (default)"]
+  D -->|Yes| F["Load Session + Profile<br/>(Role + Tenant context)"]
+
+  E --> G["App Shell<br/>Sidebar + Top Nav"]
+  F --> G
+
+  %% App Shell Navigation (left sidebar)
+  G --> H["Home"]
+  G --> I["Tech Packs<br/>(Styles / Collections)"]
+  G --> J["Upload Files<br/>(PDF Tech Pack + Excel Grading)"]
+  G --> K["Explore<br/>(Search library + attributes)"]
+  G --> L["Account Overview<br/>(Profile + org + role)"]
+  G --> S["Settings<br/>(roles, invitations, exports)"]
+  G --> Q["Security<br/>(MFA, password reset,<br/>session mgmt)"]
+  G --> P["Features<br/>(Audit, Attributes, Collaboration)"]
+
+  %% Common edge cases
+  C --> X{SSO success}
+  X -->|No| Y["Auth Error<br/>Try again / contact admin"]
+  X -->|Yes| D
+
+  D -->|Yes, but role revoked| Z["Access Denied<br/>Request access"]

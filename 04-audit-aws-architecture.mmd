@@ -1,0 +1,49 @@
+flowchart LR
+  %% Revia Stitch - Audit Pipeline (Report + Page Highlights)
+
+  subgraph Client["Client"]
+    B["Browser (SPA)"]
+  end
+
+  subgraph App["Application"]
+    APIG["API Gateway"]
+    API["Stitch API (Lambda/ECS)"]
+  end
+
+  subgraph Storage["Storage"]
+    S3["S3 (Tech Packs + Grading)"]
+  end
+
+  subgraph Queue["Queue"]
+    Q["SQS (Audit Queue)"]
+  end
+
+  subgraph Compute["Compute"]
+    ORCH["Lambda (Audit Orchestrator)"]
+    EX["Lambda (Extract + Locate + Redact)"]
+  end
+
+  subgraph AI["AI"]
+    BR["Amazon Bedrock<br/>LLM"]
+  end
+
+  subgraph Search["Search (Optional)"]
+    OS["OpenSearch<br/>Terminology / attribute lookup"]
+  end
+
+  subgraph Data["Metadata"]
+    DDB["DynamoDB (AuditRuns, Findings, Highlights)<br/>PK includes tenantId"]
+  end
+
+  B -->|HTTPS| APIG --> API
+  API -->|Read/write| DDB
+  API --> Q
+
+  Q --> ORCH --> EX
+  EX --> S3
+  EX -->|Sanitized content only| BR
+  EX -->|Optional queries| OS
+  EX -->|Store report + highlights| DDB
+
+  B -->|Poll / refresh| APIG
+

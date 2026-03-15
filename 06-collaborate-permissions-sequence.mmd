@@ -1,0 +1,46 @@
+sequenceDiagram
+  autonumber
+
+  participant U as User (Browser)
+  participant SPA as Stitch Web App (SPA)
+  participant API as Stitch API
+  participant DB as DynamoDB (Tenant + File ACL)
+  participant IDP as SSO Directory (Entra ID / Okta)
+  participant MAIL as Email (SES)
+
+  Note over U,SPA: User opens Collaborate panel
+  U->>SPA: Open Collaborate
+  SPA->>API: GET /org/users
+  API->>DB: Query users by tenantId
+  DB-->>API: Users with account profiles
+  API-->>SPA: 200 OK
+  SPA-->>U: Render org user list
+
+  SPA->>API: GET /files/{fileId}/acl
+  API->>DB: Get file ACL by tenantId + fileId
+  DB-->>API: ACL entries
+  API-->>SPA: 200 OK
+
+  Note over U,SPA: Invite user with file-level permission
+  U->>SPA: Choose user + permission + message
+  SPA->>API: POST /files/{fileId}/invites
+  API->>DB: Authorize inviter (creator or Owner)
+  alt Authorized
+    API->>DB: Upsert ACL entry (userId, permission)
+    API->>DB: Create invite record (status=Pending)
+    API->>MAIL: Send email invite notification
+    API-->>SPA: 201 Created
+  else Not authorized
+    API-->>SPA: 403 Forbidden
+  end
+
+  Note over U,SPA: Access enforcement example
+  U->>SPA: Click Export
+  SPA->>API: POST /files/{fileId}/exports
+  API->>DB: Check ACL permission == Collaborator or higher
+  alt Allowed
+    API-->>SPA: 202 Accepted
+  else Denied
+    API-->>SPA: 403 Forbidden
+  end
+

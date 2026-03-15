@@ -1,0 +1,45 @@
+flowchart LR
+  %% Revia Stitch - Export Architecture (AWS + Outlook)
+
+  subgraph Client["Client"]
+    SPA["Browser (SPA)"]
+  end
+
+  subgraph App["Application"]
+    APIG["API Gateway"]
+    API["Stitch API (Lambda/ECS)"]
+  end
+
+  subgraph Queue["Queue"]
+    Q["SQS (Export Queue)"]
+  end
+
+  subgraph Compute["Compute"]
+    W["Lambda (Export Worker)"]
+  end
+
+  subgraph Storage["Storage"]
+    S3["S3 (Source files + Exports)"]
+  end
+
+  subgraph Data["Data"]
+    DB["DynamoDB<br/>Exports + File ACL"]
+  end
+
+  subgraph Notify["Email"]
+    SES["Amazon SES"]
+  end
+
+  subgraph Outlook["Outlook"]
+    MS["Microsoft Graph API"]
+  end
+
+  SPA -->|HTTPS| APIG --> API
+  API --> DB
+  API --> Q
+  Q --> W
+  W --> S3
+  W --> DB
+  W --> SES
+  W --> MS
+

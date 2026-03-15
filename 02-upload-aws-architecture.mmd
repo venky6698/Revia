@@ -1,0 +1,53 @@
+flowchart LR
+  %% Revia Stitch - Upload + Indexing + Bedrock Processing (AWS)
+
+  subgraph Client["Client"]
+    B["Browser (SPA)"]
+  end
+
+  subgraph Edge["Edge"]
+    CF["CloudFront + WAF"]
+    S3WEB["S3 (Static Web)"]
+  end
+
+  subgraph App["Application"]
+    APIG["API Gateway"]
+    API["Stitch API (Lambda/ECS)"]
+  end
+
+  subgraph Storage["Storage"]
+    S3["S3 (Tech Packs + Grading)\nTenant-scoped keys"]
+  end
+
+  subgraph Data["Metadata + Audit"]
+    DDB["DynamoDB (Files, Styles, Collections)\nPK includes tenantId"]
+    AUD["DynamoDB (Audit Log)\nuploads, deletes, indexing runs"]
+  end
+
+  subgraph Ingest["Ingestion + Indexing"]
+    Q["SQS (Ingestion Queue)"]
+    ORCH["Lambda (Orchestrator)"]
+    EX["Lambda (Extract + Chunk + Redact)"]
+    OS["OpenSearch (Search Index)\nDoc chunks + attributes"]
+  end
+
+  subgraph AI["AI Processing"]
+    BR["Amazon Bedrock\n(LLM + Embeddings)"]
+  end
+
+  B --> CF --> S3WEB
+  B -->|HTTPS| APIG --> API
+
+  API --> DDB
+  API --> AUD
+  API -->|Pre-signed URLs| S3
+  B -->|PUT file bytes| S3
+
+  API --> Q
+  Q --> ORCH --> EX
+
+  EX --> S3
+  EX -->|Sanitized content only| BR
+  EX --> OS
+  EX --> DDB
+

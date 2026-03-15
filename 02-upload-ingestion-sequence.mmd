@@ -1,0 +1,62 @@
+sequenceDiagram
+  autonumber
+
+  participant U as User (Browser)
+  participant SPA as Stitch Web App (SPA)
+  participant API as Stitch API
+  participant DB as Metadata DB (tenantId scoped)
+  participant S3 as S3 (Tech Packs Bucket)
+  participant OS as OpenSearch (Index)
+  participant Q as SQS (Ingestion Queue)
+  participant L1 as Lambda (Ingestion Orchestrator)
+  participant L2 as Lambda (Extract + Chunk)
+  participant BR as Bedrock (LLM / Embeddings)
+
+  Note over U,SPA: User opens Upload Files page
+  U->>SPA: Navigate to Upload Files
+  SPA->>API: GET /files (tenantId, userId)
+  API->>DB: Query files by tenantId + userId
+  DB-->>API: File list + metadata + status
+  API-->>SPA: 200 OK
+  SPA-->>U: Render empty state or file list
+
+  Note over U,SPA: User uploads PDF/Excel
+  U->>SPA: Select files + Upload
+  SPA->>API: POST /uploads (init)
+  API->>DB: Create file records (status=Uploading)
+  API-->>SPA: Pre-signed S3 URLs + fileIds
+  SPA->>S3: PUT file bytes (pre-signed)
+  S3-->>SPA: 200 OK
+  SPA->>API: POST /uploads/complete (fileIds)
+  API->>DB: Update status=Queued, uploadedAt, lastModifiedAt
+  API->>Q: Enqueue ingestion job (tenantId, fileId, s3Key)
+  API-->>SPA: 202 Accepted
+
+  Note over Q,L1: Async pipeline
+  Q-->>L1: SQS message
+  L1->>DB: Update status=Indexing
+  L1->>L2: Invoke extract job (fileId)
+
+  Note over L2: Extract text, tables, and image-derived text\nRedact user-identifying info before LLM calls
+  L2->>S3: GET object
+  L2->>L2: Parse PDF/Excel + OCR tables/images
+  L2->>L2: Redact PII (sanitized content only)
+  L2->>BR: Generate embeddings / structured fields
+  BR-->>L2: Embeddings / output
+  L2->>OS: Index chunks + metadata (tenantId partition)
+  OS-->>L2: 200 OK
+  L2->>DB: Update status=Ready, indexedAt
+
+  alt Ingestion failure
+    L2->>DB: Update status=Failed, errorCode
+  end
+
+  Note over U,SPA: User deletes a file
+  U->>SPA: Delete file
+  SPA->>API: DELETE /files/{fileId}
+  API->>DB: Mark deletedAt (soft delete)
+  API->>S3: Delete object
+  API->>OS: Delete indexed docs by (tenantId, fileId)
+  API-->>SPA: 204 No Content
+  SPA-->>U: Remove row from list
+

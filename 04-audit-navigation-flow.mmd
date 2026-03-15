@@ -1,0 +1,25 @@
+flowchart LR
+  %% Revia Stitch - Audit Flow (Report + Highlights)
+
+  A["File Workspace<br/>(Viewer)"] -->|Click Audit| B["Audit Panel"]
+
+  B --> C["Run Audit<br/>(manual trigger)"]
+  C --> D["Audit Running<br/>Spinner + progress"]
+  D --> E{Audit result}
+
+  E -->|Success| R["Audit Report<br/>List of inconsistencies"]
+  E -->|Failed| F["Audit Failed<br/>Retry + error details"]
+
+  %% Report structure
+  R --> R1["Each finding includes<br/>Type, Severity, Description"]
+  R --> R2["Reference<br/>Page number + snippet"]
+  R --> R3["Tags<br/>Terminology / attribute refs"]
+  R --> R4["Actions<br/>Jump to highlight, Create change request"]
+
+  %% Viewer integration
+  R -->|Select finding| V["Viewer Jumps to Page<br/>Highlight bounding box"]
+  V -->|Edit / comment| W["Collaborate<br/>Resolve / discuss"]
+  V -->|Create fix| X["Edit Mode<br/>Apply changes"]
+  X --> Y["Commit New Version<br/>(immutable)"]
+  Y --> Z["Re-run Audit<br/>(optional)"]
+

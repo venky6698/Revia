@@ -1,0 +1,22 @@
+flowchart LR
+  %% Revia Stitch - Export Flow (PDF, Email, Outlook)
+
+  A["File Workspace"] -->|Click Export| B["Export Modal"]
+
+  B --> C["Choose export type"]
+  C --> C1["Export as PDF"]
+  C --> C2["Export to Email"]
+  C --> C3["Export to Outlook"]
+
+  B --> D["Export options<br/>Include comments<br/>Include audit report<br/>Include version stamp"]
+  B --> E["Choose recipients<br/>To, CC, subject, message"]
+
+  B --> F{Permission check}
+  F -->|Denied| G["Show error<br/>Needs Collaborator"]
+  F -->|Allowed| H["Start export job"]
+
+  H --> I["Export running<br/>Show status"]
+  I --> J{Result}
+  J -->|Success| K["Success<br/>Download link or sent notification"]
+  J -->|Failed| L["Failed<br/>Retry"]
+

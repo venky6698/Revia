@@ -1,0 +1,28 @@
+flowchart LR
+  %% Revia Stitch - Upload Page (Library + Upload CTA + File Details)
+
+  A["App Shell"] --> B["Upload Files Page"]
+
+  B --> C["Fetch User Library<br/>List files for tenantId + userId"]
+  C --> D{Any files}
+
+  D -->|No| E["Empty State<br/>No files yet<br/>Primary CTA: Upload"]
+  D -->|Yes| F["File List View<br/>Table of files + metadata"]
+
+  F --> F1["Columns<br/>File name, type, size,<br/>Uploaded at, Last modified"]
+  F --> F2["Row actions<br/>Open, Download, Delete"]
+  F --> F3["Status pill<br/>Indexing, Ready, Failed"]
+  F -->|Select file| W["File Workspace<br/>Viewer + Left Panel Actions"]
+
+  E --> G["Upload Modal / Drawer<br/>Select PDF + Excel<br/>Optional: Style/Collection"]
+  F --> G
+
+  G --> H["Upload In Progress<br/>Show per-file progress"]
+  H --> I["Upload Complete<br/>Back to list"]
+
+  I --> J{Indexing done}
+  J -->|No| K["Status: Indexing<br/>Search disabled or limited"]
+  J -->|Yes| L["Status: Ready<br/>Search enabled"]
+
+  %% File workspace entrypoint behavior
+  W -->|Default| W1["View Mode<br/>Render full PDF/Excel inline"]

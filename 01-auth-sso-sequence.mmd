@@ -1,0 +1,37 @@
+sequenceDiagram
+  autonumber
+
+  participant U as User (Browser)
+  participant SPA as Stitch Web App (SPA)
+  participant IDP as SSO IdP (Entra ID / Okta)
+  participant AUTH as Auth Broker (Amazon Cognito)
+  participant API as Stitch API (Backend)
+  participant DB as Tenant DB (Brand/User/Roles)
+
+  Note over U,SPA: User clicks "Sign in with Microsoft/Okta"
+  U->>SPA: Start SSO
+  SPA->>AUTH: /oauth2/authorize (PKCE)
+  AUTH->>IDP: Redirect (SAML/OIDC)
+
+  Note over IDP: Enforce corporate policies\n(MFA, conditional access, device posture)
+  IDP-->>AUTH: Auth response (code/assertion)
+  AUTH-->>SPA: Redirect to /auth/callback?code=...
+  SPA->>AUTH: Exchange code for tokens
+  AUTH-->>SPA: ID token + access token (JWT)
+
+  SPA->>API: Call /me (JWT)
+  API->>AUTH: Validate JWT (JWKS)
+  AUTH-->>API: Token valid
+
+  API->>DB: Lookup user by (tenantId, idpSubject/email)
+  alt First-time user
+    API->>DB: Create Brand/Tenant (partition key)
+    API->>DB: Create User profile (name, email)
+    API->>DB: Create Membership (role=Owner)
+  else Returning user
+    API->>DB: Update lastLoginAt, displayName if changed
+  end
+
+  API-->>SPA: 200 OK (profile + role + sidebar config)
+  SPA-->>U: Render App Shell + Account Overview
+

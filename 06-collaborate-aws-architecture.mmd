@@ -1,0 +1,35 @@
+flowchart LR
+  %% Revia Stitch - Collaborate + File-level Permissions (AWS)
+
+  subgraph Client["Client"]
+    SPA["Browser (SPA)"]
+  end
+
+  subgraph App["Application"]
+    APIG["API Gateway"]
+    API["Stitch API (Lambda/ECS)"]
+  end
+
+  subgraph Data["Data"]
+    USERS["DynamoDB<br/>Users + Memberships"]
+    ACL["DynamoDB<br/>File ACL + Invites"]
+    AUD["DynamoDB<br/>Audit Log"]
+  end
+
+  subgraph Identity["Identity"]
+    COG["Cognito Federation"]
+    IDP["Entra ID / Okta"]
+  end
+
+  subgraph Notify["Notifications"]
+    SES["Amazon SES"]
+  end
+
+  SPA -->|HTTPS| APIG --> API
+  SPA -->|SSO| COG <--> IDP
+
+  API --> USERS
+  API --> ACL
+  API --> AUD
+  API --> SES
+

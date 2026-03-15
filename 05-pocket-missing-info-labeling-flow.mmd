@@ -1,0 +1,21 @@
+flowchart LR
+  %% Pocket "Missing Information" training/eval flow (example scenario)
+
+  A["Raw tech pack PDF/Excel"] --> B["Extract pages + text + tables + OCR"]
+  B --> C["Normalize into schema<br/>sections, measurements, BOM, construction notes"]
+
+  C --> D["Pocket Checklist\n(ground truth rubric)"]
+  D --> D1["Pocket presence\n(does garment have pocket?)"]
+  D --> D2["Pocket type\n(patch, welt, flap, kangaroo, etc)"]
+  D --> D3["Count + placement\n(L/R, chest, side seam)"]
+  D --> D4["Dimensions + tolerances\n(width/height, opening)"]
+  D --> D5["Construction details\nstitch, reinforcement, closure"]
+  D --> D6["Visual reference\ndiagram/placement callout"]
+
+  C --> E["Label findings\nMissing / inconsistent / contradictory"]
+  E --> F["Attach evidence\npageNumber + snippet + bbox highlight"]
+
+  F --> G["Gold set (reviewed)\n+ hard negatives"]
+  G --> H["Offline eval\nRecall@Pocket + Precision\nHighlight IoU\nPage accuracy"]
+  H --> I["MLflow run\nmetrics + artifacts"]
+

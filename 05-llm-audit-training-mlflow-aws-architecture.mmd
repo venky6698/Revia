@@ -1,0 +1,57 @@
+flowchart LR
+  %% Revia Stitch - Real-world grade Audit Model Training Loop (AWS + MLflow)
+  %% Goal: consistently detect inconsistencies + missing info (e.g., pocket specs) and produce audit reports w/ page refs + highlights.
+
+  subgraph Storage["S3 Storage"]
+    RAW["S3 Raw Tech Packs<br/>(PDF) + Grading (Excel)"]
+    SAN["S3 Sanitized Extracts<br/>(redacted text/tables/images)"]
+    LAB["S3 Labeled Data<br/>(gold findings + highlights)"]
+    FEAT["S3 Features<br/>(chunks, embeddings, rules signals)"]
+    ART["S3 Model Artifacts<br/>(checkpoints, prompts, configs)"]
+  end
+
+  subgraph ETL["Ingestion + Preprocess"]
+    EVT["S3 Event / API Trigger"]
+    EX["Lambda/ECS: Extract + OCR + Tables<br/>(Textract optional)"]
+    RED["Lambda: PII Redaction<br/>(sanitized only)"]
+    MAP["Lambda: Page Map Builder<br/>(pageNumber + bbox + anchors)"]
+  end
+
+  subgraph Labeling["Labeling + Curation"]
+    UI["Labeling UI<br/>(internal)"]
+    QA["Review + QA<br/>(2-pass adjudication)"]
+    DS["Dataset Versioning<br/>(manifest per tenant + global)"]
+  end
+
+  subgraph Train["Train + Evaluate (SageMaker)"]
+    SM["SageMaker Training Job<br/>(fine-tune or classifier)"]
+    EVAL["Offline Eval Job<br/>(gold set + stress tests)"]
+    MLF["MLflow Tracking + Registry<br/>(experiments, metrics, models)"]
+  end
+
+  subgraph Deploy["Deploy + Monitor"]
+    REG["MLflow Model Registry<br/>(staging, prod)"]
+    END["Serving Endpoint<br/>(SageMaker Endpoint or ECS)"]
+    OBS["Monitoring<br/>(precision drift, cost, latency)"]
+  end
+
+  RAW --> EVT --> EX --> RED --> SAN
+  EX --> MAP --> FEAT
+  SAN --> UI --> QA --> LAB
+  LAB --> DS --> SM
+  FEAT --> SM
+
+  SM --> ART
+  SM --> EVAL --> MLF
+  SM --> MLF
+  MLF --> REG --> END
+  END --> OBS
+
+  %% Feedback loop from production audits (human-in-the-loop)
+  subgraph Feedback["Feedback Loop"]
+    PROD["Prod Audit Runs<br/>(findings + user actions)"]
+    FB["Hard Negatives + Corrections<br/>(false positives/negatives)"]
+  end
+
+  PROD --> FB --> LAB
+
